@@ -153,11 +153,135 @@ public class AbsaSemEval {
     }
   }
   
+  private static void absa2015NoTargetToNAFNER(KAFDocument kaf, String fileName, String language, String NullWord) {
+	    //reading the ABSA xml file
+	    SAXBuilder sax = new SAXBuilder();
+	    XPathFactory xFactory = XPathFactory.instance();
+	    try {
+	      Document doc = sax.build(fileName);
+	      XPathExpression<Element> expr = xFactory.compile("//sentence",
+	          Filters.element());
+	      List<Element> sentences = expr.evaluate(doc);
+	      
+	      //naf sentence counter
+	      int counter = 1;
+	      for (Element sent : sentences) {
+	        List<Integer> wfFromOffsets = new ArrayList<>();
+	        List<Integer> wfToOffsets = new ArrayList<>();
+	        List<WF> sentWFs = new ArrayList<>();
+	        List<Term> sentTerms = new ArrayList<>();
+	        //sentence id and original text
+	        String sentId = sent.getAttributeValue("id");
+	        String sentString = NullWord + " " + sent.getChildText("text") + " " + NullWord;
+	        //the list contains just one list of tokens
+	        List<List<Token>> segmentedSentence = tokenizeSentence(sentString, language);
+	        for (List<Token> sentence : segmentedSentence) {
+	          for (Token token : sentence) {
+	            WF wf = kaf.newWF(token.startOffset(), token.getTokenValue(),
+	                counter);
+	            wf.setXpath(sentId);
+	            final List<WF> wfTarget = new ArrayList<WF>();
+	            wfTarget.add(wf);
+	            wfFromOffsets.add(wf.getOffset());
+	            wfToOffsets.add(wf.getOffset() + wf.getLength());
+	            sentWFs.add(wf);
+	            Term term = kaf.newTerm(KAFDocument.newWFSpan(wfTarget));
+	            term.setPos("O");
+	            term.setLemma(token.getTokenValue());
+	            sentTerms.add(term);
+	          }
+	        }
+	        counter++;
+	        String[] tokenIds = new String[sentWFs.size()];
+	        for (int i = 0; i < sentWFs.size(); i++) {
+	          tokenIds[i] = sentWFs.get(i).getId();
+	        }
+	        //going through every opinion element for each sentence
+	        //each opinion element can contain one or more opinions
+	        Element opinionsElement = sent.getChild("Opinions");
+	        if (opinionsElement != null) {
+	          //iterating over every opinion in the opinions element
+	          List<Element> opinionList = opinionsElement.getChildren();
+	          for (Element opinion : opinionList) {
+	            String category = opinion.getAttributeValue("category");
+	            String targetString = opinion.getAttributeValue("target");
+	            System.err.println("-> " + category + ", " + targetString);
+	            //adding OTE
+	            if (!targetString.equalsIgnoreCase("NULL")) {
+	              int fromOffset = Integer.parseInt(opinion
+	                    .getAttributeValue("from")) + NullWord.length() + 1 ;
+	              int toOffset = Integer.parseInt(opinion
+	                    .getAttributeValue("to")) + NullWord.length() + 1 ;
+	              int startIndex = -1;
+	              int endIndex = -1;
+	              for (int i = 0; i < wfFromOffsets.size(); i++) {
+	                if (wfFromOffsets.get(i) == fromOffset) {
+	                  startIndex = i;
+	                }
+	              }
+	              for (int i = 0; i < wfToOffsets.size(); i++) {
+	                if (wfToOffsets.get(i) == toOffset) {
+	                  //span is +1 with respect to the last token of the span
+	                  endIndex = i + 1;
+	                }
+	              }
+	              List<String> wfIds = Arrays
+	                  .asList(Arrays.copyOfRange(tokenIds, startIndex, endIndex));
+	              List<String> wfTermIds = getWFIdsFromTerms(sentTerms);
+	              if (checkTermsRefsIntegrity(wfIds, wfTermIds)) {
+	                List<Term> nameTerms = kaf.getTermsFromWFs(wfIds);
+	                ixa.kaflib.Span<Term> neSpan = KAFDocument.newTermSpan(nameTerms);
+	                List<ixa.kaflib.Span<Term>> references = new ArrayList<ixa.kaflib.Span<Term>>();
+	                references.add(neSpan);
+	                Entity neEntity = kaf.newEntity(references);
+	                neEntity.setType(category);
+	              }
+	            }
+	            else {
+	            	List<String> wfIds = Arrays
+	  	                  .asList(Arrays.copyOfRange(tokenIds, 0, 1));
+	            	List<String> wfTermIds = getWFIdsFromTerms(sentTerms);
+	            	if (checkTermsRefsIntegrity(wfIds, wfTermIds)) {
+		                List<Term> nameTerms = kaf.getTermsFromWFs(wfIds);
+		                ixa.kaflib.Span<Term> neSpan = KAFDocument.newTermSpan(nameTerms);
+		                List<ixa.kaflib.Span<Term>> references = new ArrayList<ixa.kaflib.Span<Term>>();
+		                references.add(neSpan);
+		                Entity neEntity = kaf.newEntity(references);
+		                neEntity.setType(category);
+		              }
+	            	wfIds = Arrays
+		  	                  .asList(Arrays.copyOfRange(tokenIds, wfFromOffsets.size()-1, wfFromOffsets.size()));
+		            wfTermIds = getWFIdsFromTerms(sentTerms);
+		            if (checkTermsRefsIntegrity(wfIds, wfTermIds)) {
+		            	List<Term> nameTerms = kaf.getTermsFromWFs(wfIds);
+			            ixa.kaflib.Span<Term> neSpan = KAFDocument.newTermSpan(nameTerms);
+			            List<ixa.kaflib.Span<Term>> references = new ArrayList<ixa.kaflib.Span<Term>>();
+			            references.add(neSpan);
+			            Entity neEntity = kaf.newEntity(references);
+			            neEntity.setType(category);
+			          }
+	            }
+	          }
+	        }
+	      }//end of sentence
+	    } catch (JDOMException | IOException e) {
+	      e.printStackTrace();
+	    }
+  }
+  
   public static String absa2015ToCoNLL2002(String fileName, String language) {
     KAFDocument kaf = new KAFDocument("en", "v1.naf");
     absa2015ToNAFNER(kaf, fileName, language);
     String conllFile = ConllUtils.nafToCoNLLConvert2002(kaf);
     return conllFile;
+  }
+  
+  public static String absa2015NoTargetToCoNLL2002(String fileName, String language, String NullWord) {
+	    KAFDocument kaf = new KAFDocument("en", "v1.naf");
+	    absa2015NoTargetToNAFNER(kaf, fileName, language, NullWord);
+	    //System.err.println(kaf.toString());
+	    String conllFile = ConllUtils.nafToCoNLLConvert2002(kaf);
+	    return conllFile;
   }
   
   /**
@@ -222,6 +346,36 @@ public class AbsaSemEval {
     }
     return kaf.toString();
   }
+  
+  public static String absa2015NoTargetToWFs(String fileName, String language, String NullWord) {
+	    KAFDocument kaf = new KAFDocument("en", "v1.naf");
+	    SAXBuilder sax = new SAXBuilder();
+	    XPathFactory xFactory = XPathFactory.instance();
+	    try {
+	      Document doc = sax.build(fileName);
+	      XPathExpression<Element> expr = xFactory.compile("//sentence",
+	          Filters.element());
+	      List<Element> sentences = expr.evaluate(doc);
+
+	      int counter = 1;
+	      for (Element sent : sentences) {
+	        String sentId = sent.getAttributeValue("id");
+	        String sentString = NullWord + " " + sent.getChildText("text") + " " + NullWord;
+	        List<List<Token>> segmentedSentences = tokenizeSentence(sentString, language);
+	        for (List<Token> sentence : segmentedSentences) {
+	          for (Token token : sentence) {
+	            WF wf = kaf.newWF(token.startOffset(), token.getTokenValue(),
+	                counter);
+	            wf.setXpath(sentId);
+	          }
+	        }
+	        counter++;
+	      }
+	    } catch (JDOMException | IOException e) {
+	      e.printStackTrace();
+	    }
+	    return kaf.toString();
+	  }
 
   public static String nafToAbsa2015(String inputNAF) throws IOException {
 
@@ -285,6 +439,79 @@ public class AbsaSemEval {
     Format format = Format.getPrettyFormat();
     xmlOutput.setFormat(format);
     return xmlOutput.outputString(doc);
+  }
+  
+  public static String nafNoTargetToAbsa2015(String inputNAF, String NullWord) throws IOException {
+
+	    Path kafPath = Paths.get(inputNAF);
+	    KAFDocument kaf = KAFDocument.createFromFile(kafPath.toFile());
+	    Set<String> reviewIds = getReviewIdsFromXpathAttribute(kaf);
+	        
+	    //root element in ABSA 2015 and 2016 format
+	    Element reviewsElem = new Element("Reviews");
+	    Document doc = new Document(reviewsElem);
+	    
+	    //creating Reviews children of Review
+	    for (String reviewId : reviewIds) {
+	      Element reviewElem = new Element("Review");
+	      reviewElem.setAttribute("rid", reviewId);
+	      Element sentencesElem = new Element("sentences");
+	      //getting the sentences in the review
+	      List<List<WF>> sentencesByReview = getSentencesByReview(kaf, reviewId);
+	      for (List<WF> sent : sentencesByReview) {
+	        String sentId = sent.get(0).getXpath();
+	        Integer sentNumber = sent.get(0).getSent();
+	        
+	        //getting text element from word forms in NAF
+	        String textString = getSentenceStringFromWFs(sent);
+	        textString = textString.substring(NullWord.length(),textString.length());
+	        textString = textString.substring(0,textString.length() - NullWord.length());
+	        Element sentenceElem = new Element("sentence");
+	        sentenceElem.setAttribute("id", sentId);
+	        Element textElem = new Element("text");
+	        textElem.setText(textString);
+	        sentenceElem.addContent(textElem);
+	        
+	        //creating opinions element for sentence
+	        List<Opinion> opinionsBySentence = getOpinionsBySentence(kaf, sentNumber);
+	        Element opinionsElem = new Element("Opinions");
+	        if (!opinionsBySentence.isEmpty()) {
+	          //getting opinion info from NAF Opinion layer
+	          for (Opinion opinion : opinionsBySentence) {
+	            Element opinionElem = new Element("Opinion");
+	            //String polarity = opinion.getOpinionExpression().getPolarity();
+	            String category = opinion.getOpinionExpression().getSentimentProductFeature();
+	            String targetString = opinion.getStr();
+	            int fromOffset = 0;
+	            int toOffset = 0;
+	            if (!targetString.equals(NullWord)) {
+	            	fromOffset = opinion.getOpinionTarget().getTerms().get(0).getWFs().get(0).getOffset() - (NullWord.length() + 1);
+		            List<WF> targetWFs = opinion.getOpinionTarget().getTerms().get(opinion.getOpinionTarget().getTerms().size() -1).getWFs();
+		            toOffset = targetWFs.get(targetWFs.size() -1).getOffset() + targetWFs.get(targetWFs.size() -1).getLength() - (NullWord.length() + 1);
+	            }
+	            else {
+	            	targetString="NULL";
+	            }
+	            opinionElem.setAttribute("target", targetString);
+	            opinionElem.setAttribute("category", category);
+	            //TODO we still do not have polarity here
+	            opinionElem.setAttribute("polarity", "na");
+	            opinionElem.setAttribute("from", Integer.toString(fromOffset));
+	            opinionElem.setAttribute("to", Integer.toString(toOffset));
+	            opinionsElem.addContent(opinionElem);
+	          }
+	        }
+	        sentenceElem.addContent(opinionsElem);
+	        sentencesElem.addContent(sentenceElem);
+	      }
+	      reviewElem.addContent(sentencesElem);
+	      reviewsElem.addContent(reviewElem);
+	    }//end of review
+	    
+	    XMLOutputter xmlOutput = new XMLOutputter();
+	    Format format = Format.getPrettyFormat();
+	    xmlOutput.setFormat(format);
+	    return xmlOutput.outputString(doc);
   }
   
   private static List<List<WF>> getSentencesByReview(KAFDocument kaf, String reviewId) {

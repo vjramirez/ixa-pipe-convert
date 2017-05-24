@@ -157,14 +157,41 @@ public class CLI {
         String conllFile = AbsaSemEval.absa2015ToCoNLL2002(inputFile, language);
         System.out.print(conllFile);
       }
+      else if (parsedArguments.get("absa2015NoTargetToCoNLL2002") != null) {
+      	String NullWord = "NULL";
+    	if (parsedArguments.get("nullword") != null) {
+    		NullWord = parsedArguments.getString("nullword");
+    	}
+        String inputFile = parsedArguments.getString("absa2015NoTargetToCoNLL2002");
+        String conllFile = AbsaSemEval.absa2015NoTargetToCoNLL2002(inputFile, language, NullWord);
+        System.out.print(conllFile);
+        }
       else if (parsedArguments.get("absa2015ToWFs") != null) {
         String inputFile = parsedArguments.getString("absa2015ToWFs");
         String kafString = AbsaSemEval.absa2015ToWFs(inputFile, language);
         System.out.print(kafString);
       }
+      else if (parsedArguments.get("absa2015NoTargetToWFs") != null) {
+    	String NullWord = "NULL";
+      	if (parsedArguments.get("nullword") != null) {
+      		NullWord = parsedArguments.getString("nullword");
+      	}
+        String inputFile = parsedArguments.getString("absa2015NoTargetToWFs");
+        String kafString = AbsaSemEval.absa2015NoTargetToWFs(inputFile, language, NullWord);
+        System.out.print(kafString);
+      }
       else if (parsedArguments.get("nafToAbsa2015") != null) {
         String inputNAF = parsedArguments.getString("nafToAbsa2015");
         String xmlFile = AbsaSemEval.nafToAbsa2015(inputNAF);
+        System.out.print(xmlFile);
+      }
+      else if (parsedArguments.get("nafNoTargetToAbsa2015") != null) {
+    	String NullWord = "NULL";
+    	if (parsedArguments.get("nullword") != null) {
+    		NullWord = parsedArguments.getString("nullword");
+        }
+        String inputNAF = parsedArguments.getString("nafNoTargetToAbsa2015");
+        String xmlFile = AbsaSemEval.nafNoTargetToAbsa2015(inputNAF, NullWord);
         System.out.print(xmlFile);
       }
       else if (parsedArguments.get("absa2014ToCoNLL2002") != null) {
@@ -279,9 +306,15 @@ public class CLI {
       .choices("en", "es", "fr", "nl", "tr", "ru")
       .required(true)
       .help("Choose a language.");
+      this.absaParser.addArgument("-nw", "--nullword")
+      .required(false)
+      .help("Choose a word that will be used as target when no target is available.");
       absaParser.addArgument("--absa2015ToCoNLL2002").help("Convert ABSA SemEval 2015 and 2016 Opinion Target Extraction to CoNLL 2002 format.\n");
+      absaParser.addArgument("--absa2015NoTargetToCoNLL2002").help("Convert ABSA SemEval 2015 and 2016 Opinion Target Extraction with null target to CoNLL 2002 format.\n");
       absaParser.addArgument("--absa2015ToWFs").help("Convert ABSA SemEval 2015 and 2016 to tokenized WF NAF layer.\n");
+      absaParser.addArgument("--absa2015NoTargetToWFs").help("Convert ABSA SemEval 2015 and 2016 with null target to tokenized WF NAF layer.\n");
       absaParser.addArgument("--nafToAbsa2015").help("Convert NAF containing Opinions into ABSA 2015 and 2016 format.\n");
+      absaParser.addArgument("--nafNoTargetToAbsa2015").help("Convert NAF containing Opinions with null target into ABSA 2015 and 2016 format.\n");
       absaParser.addArgument("--absa2014ToCoNLL2002").help("Convert ABSA SemEval 2014 Aspect Term Extraction to CoNLL 2002 format.\n");
       absaParser.addArgument("--nafToAbsa2014").help("Convert NAF containing opinions into ABSA SemEval 2014 format");
       absaParser.addArgument("--yelpGetText").help("Extract text attribute from JSON yelp dataset");
