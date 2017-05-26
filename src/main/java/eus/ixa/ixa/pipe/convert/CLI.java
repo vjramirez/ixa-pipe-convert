@@ -207,6 +207,11 @@ public class CLI {
         String inputFile = parsedArguments.getString("yelpGetText");
         AbsaSemEval.getYelpText(inputFile);
       }
+      else if (parsedArguments.get("absa2015Toabsa2015NoNullTarget") != null) {
+    	String inputFile = parsedArguments.getString("absa2015Toabsa2015NoNullTarget");
+    	String xmlFile = AbsaSemEval.absa2015Toabsa2015NoNullTarget(inputFile);
+        System.out.print(xmlFile);
+      }
     }
     
     public final void cluster() throws IOException {
@@ -318,6 +323,7 @@ public class CLI {
       absaParser.addArgument("--absa2014ToCoNLL2002").help("Convert ABSA SemEval 2014 Aspect Term Extraction to CoNLL 2002 format.\n");
       absaParser.addArgument("--nafToAbsa2014").help("Convert NAF containing opinions into ABSA SemEval 2014 format");
       absaParser.addArgument("--yelpGetText").help("Extract text attribute from JSON yelp dataset");
+      absaParser.addArgument("--absa2015Toabsa2015NoNullTarget").help("Remove sentences with NULL opinion targets from BSA SemEval 2015 and 2016 format xml");
     }
     
     public void loadClusterParameters() {

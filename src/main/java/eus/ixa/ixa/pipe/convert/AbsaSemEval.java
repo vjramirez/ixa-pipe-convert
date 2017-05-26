@@ -173,6 +173,7 @@ public class AbsaSemEval {
 	        //sentence id and original text
 	        String sentId = sent.getAttributeValue("id");
 	        String sentString = NullWord + " " + sent.getChildText("text") + " " + NullWord;
+	        //String sentString = NullWord + " " + sent.getChildText("text");
 	        //the list contains just one list of tokens
 	        List<List<Token>> segmentedSentence = tokenizeSentence(sentString, language);
 	        for (List<Token> sentence : segmentedSentence) {
@@ -361,6 +362,7 @@ public class AbsaSemEval {
 	      for (Element sent : sentences) {
 	        String sentId = sent.getAttributeValue("id");
 	        String sentString = NullWord + " " + sent.getChildText("text") + " " + NullWord;
+	        //String sentString = NullWord + " " + sent.getChildText("text");
 	        List<List<Token>> segmentedSentences = tokenizeSentence(sentString, language);
 	        for (List<Token> sentence : segmentedSentences) {
 	          for (Token token : sentence) {
@@ -754,5 +756,39 @@ public class AbsaSemEval {
     return sb.toString();
   }
   
-  
+  public static String absa2015Toabsa2015NoNullTarget(String fileName) {
+	    //reading the ABSA xml file
+	    SAXBuilder sax = new SAXBuilder();
+	    XPathFactory xFactory = XPathFactory.instance();
+	    Document doc = null;
+	    try {
+	      doc = sax.build(fileName);
+	      XPathExpression<Element> expr = xFactory.compile("//sentence",
+	          Filters.element());
+	      List<Element> sentences = expr.evaluate(doc);
+
+	      for (Element sent : sentences) {
+	        Element opinionsElement = sent.getChild("Opinions");
+	        if (opinionsElement != null) {
+	          //iterating over every opinion in the opinions element
+	          List<Element> opinionList = opinionsElement.getChildren();
+	          for (Element opinion : opinionList) {
+	            String targetString = opinion.getAttributeValue("target");
+	            //adding OTE
+	            if (targetString.equalsIgnoreCase("NULL")) {
+	            	sent.getParent().removeContent(sent);
+	            	break;
+	            }
+	          }
+	        }
+	      }//end of sentence
+	    } catch (JDOMException | IOException e) {
+	      e.printStackTrace();
+	    }
+	    
+	    XMLOutputter xmlOutput = new XMLOutputter();
+	    Format format = Format.getPrettyFormat();
+	    xmlOutput.setFormat(format);
+	    return xmlOutput.outputString(doc);
+	  }
 }
