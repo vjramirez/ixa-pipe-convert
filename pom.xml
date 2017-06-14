@@ -54,7 +54,23 @@
 		<dependency>
 			<groupId>eus.ixa</groupId>
 			<artifactId>ixa-pipe-ml</artifactId>
-			<version>0.0.3</version>
+			<version>0.0.5</version>
+		</dependency>
+		<dependency>
+			<groupId>eus.ixa</groupId>
+			<artifactId>ixa-pipe-tok</artifactId>
+			<version>1.8.5</version>
+		</dependency>
+		<dependency>
+			<groupId>eus.ixa</groupId>
+			<artifactId>ixa-pipe-doc</artifactId>
+			<version>0.0.2</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
+		<dependency>
+		    <groupId>commons-io</groupId>
+		    <artifactId>commons-io</artifactId>
+		    <version>2.5</version>
 		</dependency>
 	</dependencies>
 	<distributionManagement>

@@ -157,6 +157,11 @@ public class CLI {
         String conllFile = AbsaSemEval.absa2015ToCoNLL2002(inputFile, language);
         System.out.print(conllFile);
       }
+      else if (parsedArguments.get("absa2015ToCoNLL2002_TARGET") != null) {
+          String inputFile = parsedArguments.getString("absa2015ToCoNLL2002_TARGET");
+          String conllFile = AbsaSemEval.absa2015ToCoNLL2002_TARGET(inputFile, language);
+          System.out.print(conllFile);
+        }
       else if (parsedArguments.get("absa2015NoTargetToCoNLL2002") != null) {
       	String NullWord = "NULL";
     	if (parsedArguments.get("nullword") != null) {
@@ -166,6 +171,43 @@ public class CLI {
         String conllFile = AbsaSemEval.absa2015NoTargetToCoNLL2002(inputFile, language, NullWord);
         System.out.print(conllFile);
         }
+      else if (parsedArguments.get("absa2015TargetNullToCoNLL2002") != null) {
+    	  String nullDict = "";
+	      	if (parsedArguments.get("nulldict") != null) {
+	      		nullDict = parsedArguments.getString("nulldict");
+	      	}
+          String inputFile = parsedArguments.getString("absa2015TargetNullToCoNLL2002");
+          String conllFile = AbsaSemEval.absa2015TargetNullToCoNLL2002(inputFile, language, nullDict);
+          System.out.print(conllFile);
+          }
+      else if (parsedArguments.get("absa2015TargetNullToCoNLL2002_TARGET") != null) {
+    	  String nullDict = "";
+	      	if (parsedArguments.get("nulldict") != null) {
+	      		nullDict = parsedArguments.getString("nulldict");
+	      	}
+          String inputFile = parsedArguments.getString("absa2015TargetNullToCoNLL2002_TARGET");
+          String conllFile = AbsaSemEval.absa2015TargetNullToCoNLL2002_TARGET(inputFile, language, nullDict);
+          System.out.print(conllFile);
+          }
+      else if (parsedArguments.get("absa2015NoTargetAllToCoNLL2002") != null) {
+          String inputFile = parsedArguments.getString("absa2015NoTargetAllToCoNLL2002");
+          String conllFile = AbsaSemEval.absa2015NoTargetAllToCoNLL2002(inputFile, language);
+          System.out.print(conllFile);
+          }
+      else if (parsedArguments.get("absa2015ToDocCatFormat") != null) {
+          String inputFile = parsedArguments.getString("absa2015ToDocCatFormat");
+          String conllFile = AbsaSemEval.absa2015ToDocCatFormat(inputFile, language);
+          System.out.print(conllFile);
+          }
+      else if (parsedArguments.get("absa2015ToDocCatFormatByAspect") != null) {
+    	  String Aspect = "SERVICE#GENERAL";
+    	  if (parsedArguments.get("aspect") != null) {
+    		  Aspect = parsedArguments.getString("aspect");
+    	  }
+          String inputFile = parsedArguments.getString("absa2015ToDocCatFormatByAspect");
+          String conllFile = AbsaSemEval.absa2015ToDocCatFormatByAspect(inputFile, language, Aspect);
+          System.out.print(conllFile);
+          }
       else if (parsedArguments.get("absa2015ToWFs") != null) {
         String inputFile = parsedArguments.getString("absa2015ToWFs");
         String kafString = AbsaSemEval.absa2015ToWFs(inputFile, language);
@@ -194,6 +236,11 @@ public class CLI {
         String xmlFile = AbsaSemEval.nafNoTargetToAbsa2015(inputNAF, NullWord);
         System.out.print(xmlFile);
       }
+      else if (parsedArguments.get("nafNoTargetAllToAbsa2015") != null) {
+          String inputNAF = parsedArguments.getString("nafNoTargetAllToAbsa2015");
+          String xmlFile = AbsaSemEval.nafNoTargetAllToAbsa2015(inputNAF);
+          System.out.print(xmlFile);
+        }
       else if (parsedArguments.get("absa2014ToCoNLL2002") != null) {
         String inputFile = parsedArguments.getString("absa2014ToCoNLL2002");
         String conllFile = AbsaSemEval.absa2014ToCoNLL2002(inputFile, language);
@@ -211,6 +258,32 @@ public class CLI {
     	String inputFile = parsedArguments.getString("absa2015Toabsa2015NoNullTarget");
     	String xmlFile = AbsaSemEval.absa2015Toabsa2015NoNullTarget(inputFile);
         System.out.print(xmlFile);
+      }
+      else if (parsedArguments.get("absa2015Toabsa2015AnotatedWithMultipleDocClasModels") != null) {
+		  String modelsList = "";
+		  if (parsedArguments.get("modelsList") != null) {
+			  modelsList = parsedArguments.getString("modelsList");
+		  }
+    	String inputFile = parsedArguments.getString("absa2015Toabsa2015AnotatedWithMultipleDocClasModels");
+    	String xmlFile = AbsaSemEval.absa2015Toabsa2015AnotatedWithMultipleDocClasModels(inputFile, modelsList);
+        System.out.print(xmlFile);
+      }
+      else if (parsedArguments.get("absa2015ToTextFilebyAspect") != null) {
+    	String Aspect = "SERVICE#GENERAL";
+    	if (parsedArguments.get("aspect") != null) {
+    		Aspect = parsedArguments.getString("aspect");
+    	}
+    	String OnlyOne = "no";
+    	if (parsedArguments.get("onlyone") != null) {
+    		OnlyOne = parsedArguments.getString("onlyone");
+    	}
+    	String Nulls = "no";
+    	if (parsedArguments.get("nullsonly") != null) {
+    		Nulls = parsedArguments.getString("nullsonly");
+    	}
+      	String inputFile = parsedArguments.getString("absa2015ToTextFilebyAspect");
+      	String text = AbsaSemEval.absa2015ToTextFilebyAspect(inputFile, Aspect, OnlyOne, Nulls);
+        System.out.print(text);
       }
     }
     
@@ -314,16 +387,42 @@ public class CLI {
       this.absaParser.addArgument("-nw", "--nullword")
       .required(false)
       .help("Choose a word that will be used as target when no target is available.");
+      this.absaParser.addArgument("-a", "--aspect")
+      .required(false)
+      .help("Choose an aspect to extract text from xml.");
+      this.absaParser.addArgument("-o", "--onlyone")
+      .choices("yes", "no")
+      .required(false)
+      .help("Define whether use sentences with only one opinion.");
+      this.absaParser.addArgument("-n", "--nullsonly")
+      .choices("yes", "no")
+      .required(false)
+      .help("Define whether use sentences with only null targets.");
+      this.absaParser.addArgument("-nd", "--nulldict")
+      .required(false)
+      .help("Dictionary with targets and aspects to use when NULL targets exist. Only available for absa2015TargetNullToCoNLL2002 option.");
+      this.absaParser.addArgument("-ml", "--modelsList")
+      .required(false)
+      .help("File with the list of the docClass models for absa2015Toabsa2015AnotatedWithMultipleDocClasModels");
       absaParser.addArgument("--absa2015ToCoNLL2002").help("Convert ABSA SemEval 2015 and 2016 Opinion Target Extraction to CoNLL 2002 format.\n");
-      absaParser.addArgument("--absa2015NoTargetToCoNLL2002").help("Convert ABSA SemEval 2015 and 2016 Opinion Target Extraction with null target to CoNLL 2002 format.\n");
+      absaParser.addArgument("--absa2015ToCoNLL2002_TARGET").help("Convert ABSA SemEval 2015 and 2016 Opinion Target Extraction to CoNLL 2002 format replacing aspect with 'TARGET'.\n");
+      absaParser.addArgument("--absa2015NoTargetToCoNLL2002").help("Convert ABSA SemEval 2015 and 2016 Opinion Target Extraction with null target to CoNLL 2002 format adding NULL at the beginning and end of the sentence.\n");
+      absaParser.addArgument("--absa2015TargetNullToCoNLL2002").help("Convert ABSA SemEval 2015 and 2016 Opinion Target Extraction with null target to CoNLL 2002 format adding a specific target.\n");
+      absaParser.addArgument("--absa2015TargetNullToCoNLL2002_TARGET").help("Convert ABSA SemEval 2015 and 2016 Opinion Target Extraction with null target to CoNLL 2002 format adding a specific target and replacing aspect with 'TARGET'.\n");
+      absaParser.addArgument("--absa2015NoTargetAllToCoNLL2002").help("Convert ABSA SemEval 2015 and 2016 Opinion Target Extraction with all sentence as target when NULL to CoNLL 2002 format.\n");
+      absaParser.addArgument("--absa2015ToDocCatFormat").help("Convert ABSA SemEval 2015 and 2016 Opinion Target Extraction to Document Categorizer format.\n");
+      absaParser.addArgument("--absa2015ToDocCatFormatByAspect").help("Convert ABSA SemEval 2015 and 2016 Opinion Target Extraction for the given aspect to Document Categorizer format.\n");
       absaParser.addArgument("--absa2015ToWFs").help("Convert ABSA SemEval 2015 and 2016 to tokenized WF NAF layer.\n");
       absaParser.addArgument("--absa2015NoTargetToWFs").help("Convert ABSA SemEval 2015 and 2016 with null target to tokenized WF NAF layer.\n");
       absaParser.addArgument("--nafToAbsa2015").help("Convert NAF containing Opinions into ABSA 2015 and 2016 format.\n");
       absaParser.addArgument("--nafNoTargetToAbsa2015").help("Convert NAF containing Opinions with null target into ABSA 2015 and 2016 format.\n");
+      absaParser.addArgument("--nafNoTargetAllToAbsa2015").help("Convert NAF containing Opinions with null target into ABSA 2015 and 2016 format.\n");
       absaParser.addArgument("--absa2014ToCoNLL2002").help("Convert ABSA SemEval 2014 Aspect Term Extraction to CoNLL 2002 format.\n");
       absaParser.addArgument("--nafToAbsa2014").help("Convert NAF containing opinions into ABSA SemEval 2014 format");
       absaParser.addArgument("--yelpGetText").help("Extract text attribute from JSON yelp dataset");
       absaParser.addArgument("--absa2015Toabsa2015NoNullTarget").help("Remove sentences with NULL opinion targets from BSA SemEval 2015 and 2016 format xml");
+      absaParser.addArgument("--absa2015Toabsa2015AnotatedWithMultipleDocClasModels").help("Anotate using multiple DocClass models from BSA SemEval 2015 and 2016 format xml");
+      absaParser.addArgument("--absa2015ToTextFilebyAspect").help("Extract all sentences with the selected aspect");
     }
     
     public void loadClusterParameters() {
