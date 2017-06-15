@@ -52,6 +52,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
+import eus.ixa.ixa.pipe.ml.StatisticalDocumentClassifier;
 import eus.ixa.ixa.pipe.ml.resources.Dictionary;
 import eus.ixa.ixa.pipe.ml.tok.RuleBasedTokenizer;
 import eus.ixa.ixa.pipe.ml.tok.Token;
@@ -1628,7 +1629,7 @@ public class AbsaSemEval {
 	    return text;
 	  }
   
-  public static String absa2015Toabsa2015AnotatedWithMultipleDocClasModelsX(String fileName, String modelsList) {
+  public static String absa2015Toabsa2015AnotatedWithMultipleDocClasModels(String fileName, String modelsList) {
 	    //reading the ABSA xml file
 	    SAXBuilder sax = new SAXBuilder();
 	    XPathFactory xFactory = XPathFactory.instance();
@@ -1676,20 +1677,49 @@ public class AbsaSemEval {
 			while ((line = bufferedReader.readLine()) != null) {
 				//System.err.println("-" + line + "-" + kaf.getLang());
 				
+				/*
 				File fileTmp = new File(line);
 				String fileTmp0 = Paths.get(".").toAbsolutePath().normalize().toString()+"/tmpModels/"+line+"."+cantSent;
 				File fileTmp2 = new File(fileTmp0);
 				Files.copy(fileTmp.toPath(), fileTmp2.toPath());
-				
+				*/
 				Properties oteProperties = new Properties();
-			    oteProperties.setProperty("model", fileTmp0);
+			    oteProperties.setProperty("model", line);
 			    oteProperties.setProperty("language", kaf.getLang());
 			    oteProperties.setProperty("clearFeatures", "no");
 			    
-			    eus.ixa.ixa.pipe.doc.Annotate docClassifier = new eus.ixa.ixa.pipe.doc.Annotate(oteProperties);
-			    docClassifier.classify(kaf);
+			    //eus.ixa.ixa.pipe.doc.Annotate docClassifier = new eus.ixa.ixa.pipe.doc.Annotate(oteProperties);
+			    //docClassifier.classify(kaf);
 			    
-			    Files.delete(fileTmp2.toPath());
+			    StatisticalDocumentClassifier docClassifier = new StatisticalDocumentClassifier(oteProperties);
+			    String source = oteProperties.getProperty("model");
+			    
+			    List<List<WF>> sentences0 = kaf.getSentences();
+			    List<String> tokens = new ArrayList<>();
+			    for (List<WF> sentence : sentences0) {
+			      for (WF wf : sentence) {
+			        tokens.add(wf.getForm());
+			      }
+			    }
+			    String[] document = tokens.toArray(new String[tokens.size()]);
+			    String label = docClassifier.classify(document);
+			    Topic topic = kaf.newTopic(label);
+			    double[] probs = docClassifier.classifyProb(document);
+			    topic.setConfidence((float) probs[0]);
+			    topic.setSource(Paths.get(source).getFileName().toString());
+			    topic.setMethod("ixa-pipe-doc");
+			    
+			    //System.err.println("RESULTADO: " + docClassifier.getClassifierME().getAllLabels(probs));
+			    double sum =0;
+			    for (int i = 0 ; i < probs.length; i++){
+			    	System.err.println("RESULTADO: " + docClassifier.getClassifierME().getLabel(i) + "\t\t" + probs[i]);
+			    	sum += probs[i];
+			    }
+			    sum = sum / probs.length;
+			    System.err.println("MEDIA: " + sum);
+			    
+			    
+			    //Files.delete(fileTmp2.toPath());
 			}
 			fileReader.close();
 
@@ -1722,7 +1752,7 @@ public class AbsaSemEval {
 	    return xmlOutput.outputString(doc);
   }
   
-  public static String absa2015Toabsa2015AnotatedWithMultipleDocClasModels(String fileName, String modelsList) {
+  public static String absa2015Toabsa2015AnotatedWithMultipleDocClasModelsX(String fileName, String modelsList) {
 	    //reading the ABSA xml file
 	    SAXBuilder sax = new SAXBuilder();
 	    XPathFactory xFactory = XPathFactory.instance();
