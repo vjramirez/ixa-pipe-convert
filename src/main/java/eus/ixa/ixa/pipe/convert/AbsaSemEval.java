@@ -32,10 +32,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.FileUtils;
@@ -387,6 +390,16 @@ public class AbsaSemEval {
 	          Filters.element());
 	      List<Element> sentences = expr.evaluate(doc);
 	      
+	      //REMOVE UNUSUAL CLASSES
+	      List<String> removeClass = new ArrayList<>();
+	      removeClass.add("DRINKS#PRICES");
+	      removeClass.add("LOCATION#GENERAL");
+	      removeClass.add("DRINKS#STYLE_OPTIONS");
+	      removeClass.add("DRINKS#QUALITY");
+	      removeClass.add("RESTAURANT#PRICES");
+	      removeClass.add("FOOD#PRICES");
+	      removeClass.add("RESTAURANT#MISCELLANEOUS");
+	      
 	      //Used opinion target tokens
 	      List<String> usedTargets = new ArrayList<>();
 	      for (Element sent : sentences) {
@@ -451,34 +464,36 @@ public class AbsaSemEval {
 	            System.err.println("-> " + category + ", " + targetString);
 	            //adding OTE
 	            if (!targetString.equalsIgnoreCase("NULL")) {
-	              int fromOffset = Integer.parseInt(opinion
-	                    .getAttributeValue("from"));
-	              int toOffset = Integer.parseInt(opinion
-	                    .getAttributeValue("to"));
-	              int startIndex = -1;
-	              int endIndex = -1;
-	              for (int i = 0; i < wfFromOffsets.size(); i++) {
-	                if (wfFromOffsets.get(i) == fromOffset) {
-	                  startIndex = i;
-	                }
-	              }
-	              for (int i = 0; i < wfToOffsets.size(); i++) {
-	                if (wfToOffsets.get(i) == toOffset) {
-	                  //span is +1 with respect to the last token of the span
-	                  endIndex = i + 1;
-	                }
-	              }
-	              List<String> wfIds = Arrays
-	                  .asList(Arrays.copyOfRange(tokenIds, startIndex, endIndex));
-	              List<String> wfTermIds = getWFIdsFromTerms(sentTerms);
-	              if (checkTermsRefsIntegrity(wfIds, wfTermIds)) {
-	                List<Term> nameTerms = kaf.getTermsFromWFs(wfIds);
-	                ixa.kaflib.Span<Term> neSpan = KAFDocument.newTermSpan(nameTerms);
-	                List<ixa.kaflib.Span<Term>> references = new ArrayList<ixa.kaflib.Span<Term>>();
-	                references.add(neSpan);
-	                Entity neEntity = kaf.newEntity(references);
-	                neEntity.setType(category);
-	              }
+	            	if (!removeClass.contains(category)) {
+		              int fromOffset = Integer.parseInt(opinion
+		                    .getAttributeValue("from"));
+		              int toOffset = Integer.parseInt(opinion
+		                    .getAttributeValue("to"));
+		              int startIndex = -1;
+		              int endIndex = -1;
+		              for (int i = 0; i < wfFromOffsets.size(); i++) {
+		                if (wfFromOffsets.get(i) == fromOffset) {
+		                  startIndex = i;
+		                }
+		              }
+		              for (int i = 0; i < wfToOffsets.size(); i++) {
+		                if (wfToOffsets.get(i) == toOffset) {
+		                  //span is +1 with respect to the last token of the span
+		                  endIndex = i + 1;
+		                }
+		              }
+		              List<String> wfIds = Arrays
+		                  .asList(Arrays.copyOfRange(tokenIds, startIndex, endIndex));
+		              List<String> wfTermIds = getWFIdsFromTerms(sentTerms);
+		              if (checkTermsRefsIntegrity(wfIds, wfTermIds)) {
+		                List<Term> nameTerms = kaf.getTermsFromWFs(wfIds);
+		                ixa.kaflib.Span<Term> neSpan = KAFDocument.newTermSpan(nameTerms);
+		                List<ixa.kaflib.Span<Term>> references = new ArrayList<ixa.kaflib.Span<Term>>();
+		                references.add(neSpan);
+		                Entity neEntity = kaf.newEntity(references);
+		                neEntity.setType(category);
+		              }
+	            	}
 	            }
 	            else {
 	            	Path path = Paths.get(nullDict);
@@ -490,7 +505,7 @@ public class AbsaSemEval {
 	            		startIndex += 1;
 	            		String word = wf.getForm();
 	            		if (dictionary.lookup(word.toLowerCase()) != null) {
-	            			if (dictionary.lookup(word.toLowerCase()).equalsIgnoreCase(category) && !usedTargets.contains(word.toLowerCase())) {
+	            			if (dictionary.lookup(word.toLowerCase()).equalsIgnoreCase(category) && !usedTargets.contains(word.toLowerCase()) && !removeClass.contains(category)) {
 	            				startIndexs.add(startIndex);
 	            				break;
 	            			}
@@ -988,8 +1003,8 @@ public class AbsaSemEval {
             //String polarity = opinion.getOpinionExpression().getPolarity();
             String category = opinion.getOpinionExpression().getSentimentProductFeature();
             String targetString = opinion.getStr();
-            int fromOffset = opinion.getOpinionTarget().getTerms().get(0).getWFs().get(0).getOffset();
-            List<WF> targetWFs = opinion.getOpinionTarget().getTerms().get(opinion.getOpinionTarget().getTerms().size() -1).getWFs();
+            int fromOffset = opinion.getOpinionExpression().getTerms().get(0).getWFs().get(0).getOffset();
+            List<WF> targetWFs = opinion.getOpinionExpression().getTerms().get(opinion.getOpinionExpression().getTerms().size() -1).getWFs();
             int toOffset = targetWFs.get(targetWFs.size() -1).getOffset() + targetWFs.get(targetWFs.size() -1).getLength();
             opinionElem.setAttribute("target", targetString);
             opinionElem.setAttribute("category", category);
@@ -1057,8 +1072,8 @@ public class AbsaSemEval {
 	            int fromOffset = 0;
 	            int toOffset = 0;
 	            if (!targetString.equals(NullWord)) {
-	            	fromOffset = opinion.getOpinionTarget().getTerms().get(0).getWFs().get(0).getOffset() - (NullWord.length() + 1);
-		            List<WF> targetWFs = opinion.getOpinionTarget().getTerms().get(opinion.getOpinionTarget().getTerms().size() -1).getWFs();
+	            	fromOffset = opinion.getOpinionExpression().getTerms().get(0).getWFs().get(0).getOffset() - (NullWord.length() + 1);
+		            List<WF> targetWFs = opinion.getOpinionExpression().getTerms().get(opinion.getOpinionExpression().getTerms().size() -1).getWFs();
 		            toOffset = targetWFs.get(targetWFs.size() -1).getOffset() + targetWFs.get(targetWFs.size() -1).getLength() - (NullWord.length() + 1);
 	            }
 	            else {
@@ -1125,8 +1140,8 @@ public class AbsaSemEval {
 	            //String polarity = opinion.getOpinionExpression().getPolarity();
 	            String category = opinion.getOpinionExpression().getSentimentProductFeature();
 	            String targetString = opinion.getStr();
-	            int fromOffset = opinion.getOpinionTarget().getTerms().get(0).getWFs().get(0).getOffset();
-	            List<WF> targetWFs = opinion.getOpinionTarget().getTerms().get(opinion.getOpinionTarget().getTerms().size() -1).getWFs();
+	            int fromOffset = opinion.getOpinionExpression().getTerms().get(0).getWFs().get(0).getOffset();
+	            List<WF> targetWFs = opinion.getOpinionExpression().getTerms().get(opinion.getOpinionExpression().getTerms().size() -1).getWFs();
 	            int toOffset = targetWFs.get(targetWFs.size() -1).getOffset() + targetWFs.get(targetWFs.size() -1).getLength();
 	            if (targetString.equals(textString)) {
 	            	targetString = "NULL";
@@ -1169,7 +1184,7 @@ public class AbsaSemEval {
     List<Opinion> opinionList = kaf.getOpinions();
     List<Opinion> opinionsBySentence = new ArrayList<>();
     for (Opinion opinion : opinionList) {
-      if (sentNumber.equals(opinion.getOpinionTarget().getSpan().getFirstTarget().getSent())) {
+      if (sentNumber.equals(opinion.getOpinionExpression().getSpan().getFirstTarget().getSent())) {
         opinionsBySentence.add(opinion);
       }
     }
@@ -1325,8 +1340,8 @@ public class AbsaSemEval {
         for (Opinion opinion : opinionsBySentence) {
           String polarity = "";
           String targetString = opinion.getStr();
-          int fromOffset = opinion.getOpinionTarget().getTerms().get(0).getWFs().get(0).getOffset();
-          List<WF> targetWFs = opinion.getOpinionTarget().getTerms().get(opinion.getOpinionTarget().getTerms().size() -1).getWFs();
+          int fromOffset = opinion.getOpinionExpression().getTerms().get(0).getWFs().get(0).getOffset();
+          List<WF> targetWFs = opinion.getOpinionExpression().getTerms().get(opinion.getOpinionExpression().getTerms().size() -1).getWFs();
           int toOffset = targetWFs.get(targetWFs.size() -1).getOffset() + targetWFs.get(targetWFs.size() -1).getLength();
           
           Element aspectTerm = new Element("aspectTerm");
@@ -1591,6 +1606,8 @@ public class AbsaSemEval {
 	      removeAspects.add("DRINKS#QUALITY");
 	      */
 	      
+	      int cantBalanced = 0;
+	      
 	      for (Element sent : sentences) {
 	        Element opinionsElement = sent.getChild("Opinions");
 	        String sentStringTmp = sent.getChildText("text");
@@ -1615,8 +1632,12 @@ public class AbsaSemEval {
 	    	  
 	    	  if (removeAspects.contains(aspect)) {
 	    		  text += aspect + "\t" + sentString + "\n";
+	    		  cantBalanced  ++;
 	    	  } else {
-	    		  text += "NO\t" + sentString + "\n";
+	    		  if (cantBalanced > 0 ) {
+	    			  text += "NO\t" + sentString + "\n";
+	    			  cantBalanced--;
+	    		  }
 	    	  }
 	    	  
 	          
@@ -1669,6 +1690,14 @@ public class AbsaSemEval {
 		    annotator.tokenizeToKAF(kaf);
 
 		    //System.err.println(kaf.toString());
+		    
+		    BufferedReader reader = new BufferedReader(new FileReader(modelsList));
+		    int lines = 0;
+		    while (reader.readLine() != null) lines++;
+		    reader.close();
+		    
+		    boolean Binary = false;
+		    if (lines>1) Binary = true; 
 
 	        File file = new File(modelsList);
 			FileReader fileReader = new FileReader(file);
@@ -1703,20 +1732,78 @@ public class AbsaSemEval {
 			    }
 			    String[] document = tokens.toArray(new String[tokens.size()]);
 			    String label = docClassifier.classify(document);
-			    Topic topic = kaf.newTopic(label);
+			    //Topic topic = kaf.newTopic(label);
 			    double[] probs = docClassifier.classifyProb(document);
-			    topic.setConfidence((float) probs[0]);
-			    topic.setSource(Paths.get(source).getFileName().toString());
-			    topic.setMethod("ixa-pipe-doc");
+			    //topic.setConfidence((float) probs[0]);
+			    //topic.setSource(Paths.get(source).getFileName().toString());
+			    //topic.setMethod("ixa-pipe-doc");
+			    
+			    SortedMap<Double, String> map = new TreeMap<Double, String>(Collections.reverseOrder());
+			    
 			    
 			    //System.err.println("RESULTADO: " + docClassifier.getClassifierME().getAllLabels(probs));
-			    double sum =0;
+			    System.err.println("SENTENCE:" + sent.getChildText("text"));
+			    Double sum =0.0;
 			    for (int i = 0 ; i < probs.length; i++){
-			    	System.err.println("RESULTADO: " + docClassifier.getClassifierME().getLabel(i) + "\t\t" + probs[i]);
+			    	//System.err.println("RESULTADO: " + docClassifier.getClassifierME().getLabel(i) + "\t\t" + probs[i]);
 			    	sum += probs[i];
+			    	
+			    	map.put(probs[i], docClassifier.getClassifierME().getLabel(i));
+			    	
+			    	//System.err.println("\t\tPUT: " + probs[i] + " -- " + docClassifier.getClassifierME().getLabel(i));
+			    	
+			    	//Topic topic = kaf.newTopic(docClassifier.getClassifierME().getLabel(i));
+			    	//topic.setConfidence((float) probs[i]);
+				    //topic.setSource(Paths.get(source).getFileName().toString());
+				    //topic.setMethod("ixa-pipe-doc");
 			    }
 			    sum = sum / probs.length;
 			    System.err.println("MEDIA: " + sum);
+			    
+			    Set<Double> Keys = map.keySet();
+			    
+			    boolean first = true;
+			    for (Double key : Keys) {
+			    	System.err.println("\t\t" + key + "\t" + map.get(key));
+			    	if (Binary) {
+			    		if (key >= 0.40) {
+			    			Topic topic = kaf.newTopic(map.get(key));
+					    	topic.setConfidence((float) key.floatValue());
+						    topic.setSource(Paths.get(source).getFileName().toString());
+						    topic.setMethod("ixa-pipe-doc");
+			    		}
+			    		break;
+			    	}
+			    	else {
+			    		if (first) {
+				    		first=false;
+				    		/*if (key > 0.65 || (key < 0.20 && key > 0.10)) {
+				    			Topic topic = kaf.newTopic(map.get(key));
+						    	topic.setConfidence((float) key.floatValue());
+							    topic.setSource(Paths.get(source).getFileName().toString());
+							    topic.setMethod("ixa-pipe-doc");
+							    //break;
+				    		}
+				    		else */
+				    			if (key < 0.10){
+				    			break;
+				    		}
+				    		else {
+				    			Topic topic = kaf.newTopic(map.get(key));
+						    	topic.setConfidence((float) key.floatValue());
+							    topic.setSource(Paths.get(source).getFileName().toString());
+							    topic.setMethod("ixa-pipe-doc");
+				    		}
+				    	}
+				    	else if (key > 0.25){
+				    			Topic topic = kaf.newTopic(map.get(key));
+						    	topic.setConfidence((float) key.floatValue());
+							    topic.setSource(Paths.get(source).getFileName().toString());
+							    topic.setMethod("ixa-pipe-doc");
+				    	}
+			    	}
+			    	
+			    }
 			    
 			    
 			    //Files.delete(fileTmp2.toPath());
@@ -1726,6 +1813,8 @@ public class AbsaSemEval {
 		    //System.err.println(kaf.toString());
 		    cantSent++;
 		    
+		    System.err.println("IsBinary: " + Binary);
+		    
 		    List<Topic> topicList = kaf.getTopics();
 		    for (Topic topic : topicList) {
 		    	//System.err.println(topic.getTopicValue());
@@ -1734,7 +1823,7 @@ public class AbsaSemEval {
 		    		opinionElem.setAttribute("target", "na");
 		            opinionElem.setAttribute("category", topic.getTopicValue());
 		            //TODO we still do not have polarity here
-		            opinionElem.setAttribute("polarity", "na");
+		            opinionElem.setAttribute("polarity", String.valueOf(topic.getConfidence()));
 		            opinionElem.setAttribute("from", "0");
 		            opinionElem.setAttribute("to", "0");
 		            opinionsElement.addContent(opinionElem);
