@@ -80,8 +80,13 @@ public class CLI {
    * The parser that manages the general conversion functions.
    */
   private final Subparser convertParser;
+  /**
+   * The parser that manages the absa 3-anotated sub-command.
+   */
+  private final Subparser absa3Parser;
   
   private static final String ABSA_CONVERSOR_NAME = "absa";
+  private static final String ABSA3_CONVERSOR_NAME = "absa3";
   private static final String CLUSTER_CONVERSOR_NAME = "cluster";
   private static final String TREEBANK_CONVERSOR_NAME = "treebank";
   private static final String NAF_CONVERSOR_NAME = "naf";
@@ -102,6 +107,8 @@ public class CLI {
     convertParser = subParsers.addParser(OTHER_CONVERSOR_NAME).help(
         "Other conversion functions.");
     loadConvertParameters();
+    absa3Parser = subParsers.addParser(ABSA3_CONVERSOR_NAME).help("ABSA-3Model tasks");
+    loadAbsa3Parameters();
   }
   
   public static void main(String[] args) throws IOException, ParserConfigurationException, SAXException, JDOMException {
@@ -140,11 +147,14 @@ public class CLI {
         case OTHER_CONVERSOR_NAME:
           convert();
           break;
+        case ABSA3_CONVERSOR_NAME:
+            absa3();
+            break;
         }
       } catch (final ArgumentParserException e) {
         parser.handleError(e);
         System.out.println("Run java -jar target/ixa-pipe-convert-" + version
-            + "-exec.jar (absa|cluster|treebank|naf|convert) -help for details");
+            + "-exec.jar (absa|cluster|treebank|naf|convert|absa3) -help for details");
         System.exit(1);
       }
     }
@@ -379,6 +389,19 @@ public class CLI {
       }
     }
     
+    public final void absa3() throws IOException {
+    	//String language = parsedArguments.getString("language");
+    	String DocCatBinaryModelList = parsedArguments.getString("BinaryModelsList");
+    	String DoccatMulticlassModel = parsedArguments.getString("MulticlassDocCatModel");
+    	String SequenceModel = parsedArguments.getString("SequeceModel"); 
+        if (parsedArguments.get("absa2015ToNAFAnotatedWith3Models") != null) {
+          //String inputFile = parsedArguments.getString("absa2015ToNAFAnotatedWith3Models");
+          System.err.println("Entra a funcion principal");
+          String nafFile = Absa3.absa2015ToNAFAnotatedWith3Models(System.in, SequenceModel, DoccatMulticlassModel, DocCatBinaryModelList);
+          System.out.print(nafFile);
+        }
+    }
+    
     public void loadAbsaParameters() {
       this.absaParser.addArgument("-l", "--language")
       .choices("en", "es", "fr", "nl", "tr", "ru")
@@ -423,6 +446,23 @@ public class CLI {
       absaParser.addArgument("--absa2015Toabsa2015NoNullTarget").help("Remove sentences with NULL opinion targets from BSA SemEval 2015 and 2016 format xml");
       absaParser.addArgument("--absa2015Toabsa2015AnotatedWithMultipleDocClasModels").help("Anotate using multiple DocClass models from BSA SemEval 2015 and 2016 format xml");
       absaParser.addArgument("--absa2015ToTextFilebyAspect").help("Extract all sentences with the selected aspect");
+    }
+    
+    public void loadAbsa3Parameters() {
+    	this.absa3Parser.addArgument("-l", "--language")
+        .choices("en", "es", "fr", "nl", "tr", "ru")
+        .required(true)
+        .help("Choose a language.");
+    	this.absa3Parser.addArgument("-bml", "--BinaryModelsList")
+        .required(true)
+        .help("File with the list of the Binary docClass models");
+    	this.absa3Parser.addArgument("-mm", "--MulticlassDocCatModel")
+        .required(true)
+        .help("Multiclass Document Categorizer Model");
+    	this.absa3Parser.addArgument("-sm", "--SequeceModel")
+        .required(true)
+        .help("Multiclass Document Categorizer Model");
+    	absa3Parser.addArgument("--absa2015ToNAFAnotatedWith3Models").help("Extract all sentences with the selected aspect");
     }
     
     public void loadClusterParameters() {

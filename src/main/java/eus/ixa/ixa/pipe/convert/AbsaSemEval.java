@@ -1541,15 +1541,15 @@ public class AbsaSemEval {
 
     	  for (Element opinion : opinionList) {
 
-              //String targetString = opinion.getAttributeValue("target");
+              String targetString = opinion.getAttributeValue("target");
               String categoryString = opinion.getAttributeValue("category");
     		  //if(!removeAspects.contains(categoryString)) {
-                  //text += categoryString + "\t" + sentString + "\t" + targetString +"\n";
-    			  removeAspects.add(categoryString);
+                  text += categoryString + "\t" + sentString + "\t" + targetString +"\n";
+    			  //removeAspects.add(categoryString);
     			  
     		  //}
     	  }
-    	  
+    	  /*
     	  if (removeAspects.contains("FOOD#QUALITY")) {
     		  text += "FOOD#QUALITY\t" + sentString + "\n";
     	  } else if (removeAspects.contains("SERVICE#GENERAL")) {
@@ -1575,7 +1575,7 @@ public class AbsaSemEval {
     	  }else if (removeAspects.contains("DRINKS#PRICES")) {
     		  text += "DRINKS#PRICES\t" + sentString + "\n";
     	  }
-          
+          */
           
         }
       }//end of sentence
@@ -1980,7 +1980,7 @@ public class AbsaSemEval {
 	    Format format = Format.getPrettyFormat();
 	    xmlOutput.setFormat(format);
 	    return xmlOutput.outputString(doc);
+  }
+
 }
-  
-  
-}
+

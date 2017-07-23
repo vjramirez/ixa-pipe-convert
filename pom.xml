@@ -66,6 +66,16 @@
 			<artifactId>ixa-pipe-doc</artifactId>
 			<version>0.0.2</version>
 		</dependency>
+		<dependency>
+		    <groupId>eus.ixa</groupId>
+		    <artifactId>ixa-pipe-pos</artifactId>
+		    <version>1.5.1</version>
+		</dependency>
+		<dependency>
+		    <groupId>eus.ixa</groupId>
+		    <artifactId>ixa-pipe-opinion</artifactId>
+		    <version>1.0.0</version>
+		</dependency>
 		<!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
 		<dependency>
 		    <groupId>commons-io</groupId>
