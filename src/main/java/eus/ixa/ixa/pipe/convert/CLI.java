@@ -322,6 +322,18 @@ public class CLI {
       	String text = AbsaSemEval.absa2015ToTextFilebyAspect(inputFile, Aspect, OnlyOne, Nulls);
         System.out.print(text);
       }
+      else if (parsedArguments.get("absa2015ToDocCatFormatForPolarity") != null) {
+      	int min = 1000;
+      	int max = 1000;
+      	if (parsedArguments.get("window") != null) {
+      		String window = parsedArguments.getString("window");
+      		min = Integer.parseInt(window.split(",")[0]);
+      		max = Integer.parseInt(window.split(",")[1]);
+      	}
+        	String inputFile = parsedArguments.getString("absa2015ToDocCatFormatForPolarity");
+        	String text = AbsaSemEval.absa2015ToDocCatFormatForPolarity(inputFile, language, min, max);
+          System.out.print(text);
+        }
     }
     
     public final void treebank() throws IOException {
@@ -352,16 +364,24 @@ public class CLI {
     }
     
     public final void absa3() throws IOException {
-    	//String language = parsedArguments.getString("language");
-    	String DocCatBinaryModelList = parsedArguments.getString("BinaryModelsList");
-    	String DoccatMulticlassModel = parsedArguments.getString("MulticlassDocCatModel");
-    	String SequenceModel = parsedArguments.getString("SequeceModel"); 
+    	String language = parsedArguments.getString("language");
+
         if (parsedArguments.get("absa2015ToNAFAnotatedWith3Models") != null) {
+        	//String language = parsedArguments.getString("language");
+        	String DocCatBinaryModelList = parsedArguments.getString("BinaryModelsList");
+        	String DoccatMulticlassModel = parsedArguments.getString("MulticlassDocCatModel");
+        	String SequenceModel = parsedArguments.getString("SequeceModel"); 
           //String inputFile = parsedArguments.getString("absa2015ToNAFAnotatedWith3Models");
           System.err.println("Entra a funcion principal");
           String nafFile = Absa3.absa2015ToNAFAnotatedWith3Models(System.in, SequenceModel, DoccatMulticlassModel, DocCatBinaryModelList);
           System.out.print(nafFile);
         }
+        else if (parsedArguments.get("nafToNafWithOpinions") != null) {
+            String inputNAF = parsedArguments.getString("nafToNafWithOpinions");
+            String absaXML = parsedArguments.getString("absaXml");
+            String nafFile = Absa3.nafToNafWithOpinions(inputNAF,absaXML,language);
+            System.out.print(nafFile);
+          } 
     }
     
     public void loadAbsaParameters() {
@@ -389,6 +409,9 @@ public class CLI {
       this.absaParser.addArgument("-ml", "--modelsList")
       .required(false)
       .help("File with the list of the docClass models for absa2015Toabsa2015AnotatedWithMultipleDocClasModels");
+      this.absaParser.addArgument("-w", "--window")
+      .required(false)
+      .help("Define window size around target for document classification for polarity: absa2015ToDocCatFormatForPolarity. Example: 5,5");
       absaParser.addArgument("--absa2015ToCoNLL2002").help("Convert ABSA SemEval 2015 and 2016 Opinion Target Extraction to CoNLL 2002 format.\n");
       absaParser.addArgument("--absa2015ToCoNLL2002_TARGET").help("Convert ABSA SemEval 2015 and 2016 Opinion Target Extraction to CoNLL 2002 format replacing aspect with 'TARGET'.\n");
       absaParser.addArgument("--absa2015NoTargetToCoNLL2002").help("Convert ABSA SemEval 2015 and 2016 Opinion Target Extraction with null target to CoNLL 2002 format adding NULL at the beginning and end of the sentence.\n");
@@ -410,6 +433,7 @@ public class CLI {
       absaParser.addArgument("--absa2015Toabsa2015NoNullTarget").help("Remove sentences with NULL opinion targets from BSA SemEval 2015 and 2016 format xml");
       absaParser.addArgument("--absa2015Toabsa2015AnotatedWithMultipleDocClasModels").help("Anotate using multiple DocClass models from BSA SemEval 2015 and 2016 format xml");
       absaParser.addArgument("--absa2015ToTextFilebyAspect").help("Extract all sentences with the selected aspect");
+      absaParser.addArgument("--absa2015ToDocCatFormatForPolarity").help("Convert ABSA SemEval 2015 and 2016 Opinion Target Extraction to Document Categorizer format for Polarity.\n");
     }
     
     public void loadAbsa3Parameters() {
@@ -418,15 +442,21 @@ public class CLI {
         .required(true)
         .help("Choose a language.");
     	this.absa3Parser.addArgument("-bml", "--BinaryModelsList")
-        .required(true)
+        .required(false)
         .help("File with the list of the Binary docClass models");
     	this.absa3Parser.addArgument("-mm", "--MulticlassDocCatModel")
-        .required(true)
+        .required(false)
         .help("Multiclass Document Categorizer Model");
     	this.absa3Parser.addArgument("-sm", "--SequeceModel")
-        .required(true)
+        .required(false)
         .help("Multiclass Document Categorizer Model");
-    	absa3Parser.addArgument("--absa2015ToNAFAnotatedWith3Models").help("Extract all sentences with the selected aspect");
+    	this.absa3Parser.addArgument("--absa2015ToNAFAnotatedWith3Models")
+    	.help("Extract all sentences with the selected aspect");
+    	this.absa3Parser.addArgument("-ax","--absaXml")
+    	.required(false)
+    	.help("ABSA XML used to add opinion tags to NAF");
+    	this.absa3Parser.addArgument("--nafToNafWithOpinions")
+    	.help("Anotate NAF with opinion tags from ABSA xml");
   }
 
   public final void cluster() throws IOException {

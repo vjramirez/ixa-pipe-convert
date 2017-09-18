@@ -4,12 +4,16 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -17,10 +21,18 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.JDOMException;
+import org.jdom2.filter.Filters;
 import org.jdom2.input.SAXBuilder;
+import org.jdom2.output.Format;
+import org.jdom2.output.XMLOutputter;
+import org.jdom2.xpath.XPathExpression;
 import org.jdom2.xpath.XPathFactory;
 
 import eus.ixa.ixa.pipe.ml.StatisticalDocumentClassifier;
+import eus.ixa.ixa.pipe.ml.tok.RuleBasedTokenizer;
+import eus.ixa.ixa.pipe.ml.tok.Token;
 import eus.ixa.ixa.pipe.opinion.AnnotateTargets;
 import eus.ixa.ixa.pipe.opinion.DocAnnotateAspects;
 import ixa.kaflib.KAFDocument;
@@ -332,5 +344,119 @@ public class Absa3 {
 		  }
 		  return kaf.toString();
 	  }
+	  
+	  public static String nafToNafWithOpinions(String inputNAF, String AbsaXML, String language) throws IOException {
+
+		    Path kafPath = Paths.get(inputNAF);
+		    KAFDocument kaf = KAFDocument.createFromFile(kafPath.toFile());
+		    
+		    SAXBuilder sax = new SAXBuilder();
+		    XPathFactory xFactory = XPathFactory.instance();
+		    Document doc = null;
+		    try {
+		    	doc = sax.build(AbsaXML);
+			    XPathExpression<Element> expr = xFactory.compile("//sentence",
+			          Filters.element());
+			    List<Element> sentences = expr.evaluate(doc);
+			    
+			    for (Element sentXML : sentences) {
+			        Element opinionsElement = sentXML.getChild("Opinions");
+			        //String sentStringTmp = sent.getChildText("text");
+			        String SentIdString = sentXML.getAttributeValue("id");
+			        
+			        List<WF> sent = null;
+			        for (List<WF> sentTmp : kaf.getSentences()) {
+					      String reviewId = sentTmp.get(0).getXpath();
+					      if (reviewId.equalsIgnoreCase(SentIdString)){
+					    	  sent = sentTmp;
+					      }
+			        }
+			        
+			        String[] tokens = new String[sent.size()];
+			        String[] tokenIds = new String[sent.size()];
+			        for (int i = 0; i < sent.size(); i++) {
+			          tokens[i] = sent.get(i).getForm();
+			          tokenIds[i] = sent.get(i).getId();
+			        }
+			        
+			        
+			        if (opinionsElement != null) {
+			          //iterating over every opinion in the opinions element
+			          List<Element> opinionList = opinionsElement.getChildren();
+			          
+			          
+
+			    	  for (Element opinion : opinionList) {
+			    		  String targetString = opinion.getAttributeValue("target");
+			              String categoryString = opinion.getAttributeValue("category");
+			    		  List<List<Token>> segmentedSentence = tokenizeSentence(targetString, language);
+					      List<Token> target = segmentedSentence.get(0);
+					      String targetMin = target.get(0).getTokenValue();
+		            	  String targetMax = target.get(target.size()-1).getTokenValue();
+					      int posTargetMin=-1;
+		            	  int posTargetMax=-1;
+		            	  
+		            	  if (targetString.equalsIgnoreCase("NULL")) {
+		            		  posTargetMin=0;
+		            		  posTargetMax=sent.size();
+		            	  }
+		            	  else {
+		            		  int count = 0;
+			            	  for (WF token : sent) {
+			                	  if (token.getForm().equals(targetMin)) {
+			                		  posTargetMin=count;
+			                	  }
+			                	  count++;
+			                	  if (token.getForm().equals(targetMax) && posTargetMin > -1) {
+			                		  posTargetMax=count;
+			                		  break;
+			                	  }
+
+			                  }
+		            	  }
+					      
+		            	  System.err.println(posTargetMin + " - " + posTargetMax);
+		            	  List<Term> nameTerms = kaf.getTermsFromWFs(Arrays.asList(Arrays
+		            	            .copyOfRange(tokenIds, posTargetMin, posTargetMax)));
+		            	  ixa.kaflib.Span<Term> oteSpan = KAFDocument.newTermSpan(nameTerms);
+		                  Opinion newOpinion = kaf.newOpinion();
+		                  newOpinion.createOpinionTarget(oteSpan);
+		                  //TODO expression span, perhaps heuristic around ote?
+		                  OpinionExpression opExpression = newOpinion.createOpinionExpression(oteSpan);
+		                  opExpression.setSentimentProductFeature(categoryString);
+					      
+					      
+			    	  }
+			    		  
+			        }
+			    }
+		    }catch (JDOMException | IOException e) {
+		      e.printStackTrace();
+		    }
+		    
+		    	  
+		    return kaf.toString();
+
+		  }
+	  
+	  
+	  private static List<List<Token>> tokenizeSentence(String sentString, String language) {
+		    RuleBasedTokenizer tokenizer = new RuleBasedTokenizer(sentString,
+		        setTokenizeProperties(language));
+		    List<String> sentenceList = new ArrayList<>();
+		    sentenceList.add(sentString);
+		    String[] sentences = sentenceList.toArray(new String[sentenceList.size()]);
+		    List<List<Token>> tokens = tokenizer.tokenize(sentences);
+		    return tokens;
+		  }
+	  
+	  private static Properties setTokenizeProperties(String language) {
+		    Properties annotateProperties = new Properties();
+		    annotateProperties.setProperty("language", language);
+		    annotateProperties.setProperty("normalize", "default");
+		    annotateProperties.setProperty("hardParagraph", "no");
+		    annotateProperties.setProperty("untokenizable", "no");
+		    return annotateProperties;
+		  }
 	  
 }

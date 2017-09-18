@@ -400,13 +400,14 @@ public class AbsaSemEval {
 	      
 	      //REMOVE UNUSUAL CLASSES
 	      List<String> removeClass = new ArrayList<>();
-	      removeClass.add("DRINKS#PRICES");
+	      /*removeClass.add("DRINKS#PRICES");
 	      removeClass.add("LOCATION#GENERAL");
 	      removeClass.add("DRINKS#STYLE_OPTIONS");
 	      removeClass.add("DRINKS#QUALITY");
 	      removeClass.add("RESTAURANT#PRICES");
 	      removeClass.add("FOOD#PRICES");
 	      removeClass.add("RESTAURANT#MISCELLANEOUS");
+	      */
 	      
 	      //Used opinion target tokens
 	      List<String> usedTargets = new ArrayList<>();
@@ -469,7 +470,7 @@ public class AbsaSemEval {
 	          for (Element opinion : opinionList) {
 	            String category = opinion.getAttributeValue("category");
 	            String targetString = opinion.getAttributeValue("target");	            
-	            System.err.println("-> " + category + ", " + targetString);
+	            System.err.println("-> "+ sentId + " | " + category + ", " + targetString);
 	            //adding OTE
 	            if (!targetString.equalsIgnoreCase("NULL")) {
 	            	if (!removeClass.contains(category)) {
@@ -1014,19 +1015,27 @@ public class AbsaSemEval {
             // String polarity = opinion.getOpinionExpression().getPolarity();
             String category = opinion.getOpinionExpression()
                 .getSentimentProductFeature();
+            String polarity = "na";
+            if (opinion.getOpinionExpression().getPolarity() != null) {
+            	polarity = opinion.getOpinionExpression()
+                        .getPolarity();
+            }
             String targetString = opinion.getStr();
+            if (targetString.equalsIgnoreCase(textString)) {
+            	targetString = "NULL";
+            }
 
-            int fromOffset = opinion.getOpinionTarget().getTerms().get(0)
+            int fromOffset = opinion.getOpinionExpression().getTerms().get(0)
                 .getWFs().get(0).getOffset();
-            List<WF> targetWFs = opinion.getOpinionTarget().getTerms()
-                .get(opinion.getOpinionTarget().getTerms().size() - 1).getWFs();
+            List<WF> targetWFs = opinion.getOpinionExpression().getTerms()
+                .get(opinion.getOpinionExpression().getTerms().size() - 1).getWFs();
             int toOffset = targetWFs.get(targetWFs.size() - 1).getOffset()
                 + targetWFs.get(targetWFs.size() - 1).getLength();
 
             opinionElem.setAttribute("target", targetString);
             opinionElem.setAttribute("category", category);
             // TODO we still do not have polarity here
-            opinionElem.setAttribute("polarity", "na");
+            opinionElem.setAttribute("polarity", polarity);
             opinionElem.setAttribute("from", Integer.toString(fromOffset));
             opinionElem.setAttribute("to", Integer.toString(toOffset));
             opinionsElem.addContent(opinionElem);
@@ -1214,7 +1223,7 @@ public class AbsaSemEval {
     List<Opinion> opinionsBySentence = new ArrayList<>();
     for (Opinion opinion : opinionList) {
       if (sentNumber.equals(
-          opinion.getOpinionTarget().getSpan().getFirstTarget().getSent())) {
+          opinion.getOpinionExpression().getSpan().getFirstTarget().getSent())) {
         opinionsBySentence.add(opinion);
       }
     }
@@ -2029,6 +2038,87 @@ public class AbsaSemEval {
 	    xmlOutput.setFormat(format);
 	    return xmlOutput.outputString(doc);
   }
+  
+  
+  public static String absa2015ToDocCatFormatForPolarity(String fileName, String language, int windowMin, int windowMax) {
+		SAXBuilder sax = new SAXBuilder();
+	    XPathFactory xFactory = XPathFactory.instance();
+	    Document doc = null;
+	    String text = "";
+	    
+	    try {
+	      doc = sax.build(fileName);
+	      XPathExpression<Element> expr = xFactory.compile("//sentence",
+	          Filters.element());
+	      List<Element> sentences = expr.evaluate(doc);
+	      
+	      for (Element sent : sentences) {
+	        Element opinionsElement = sent.getChild("Opinions");
+	        String sentStringTmp = sent.getChildText("text");
+
+	        
+	        List<List<Token>> segmentedSentence = tokenizeSentence(sentStringTmp, language);
+	        List<Token> sentence = segmentedSentence.get(0);
+	        
+	        if (opinionsElement != null) {
+	          //iterating over every opinion in the opinions element
+	          List<Element> opinionList = opinionsElement.getChildren();
+
+	    	  for (Element opinion : opinionList) {
+	    		  
+	    		  String sentString = "";
+
+	              String targetString = opinion.getAttributeValue("target");
+	              String polarityString = opinion.getAttributeValue("polarity");
+	              
+	              if (targetString.equalsIgnoreCase("NULL") || opinionList.size()==1) {
+	            	  for (Token token : sentence) {
+	                	  sentString += token.getTokenValue() + " ";
+	                  }
+	            	  text += polarityString + "\t" + sentString +"\n";
+	              }
+	              else {
+	            	  int posTargetMin=-1;
+	            	  int posTargetMax=-1;
+	            	  //List<String> itemsTarget = Arrays.asList(targetString.split(" "));
+	            	  List<List<Token>> segmentedtarget = tokenizeSentence(targetString, language);
+	            	  List<Token> target = segmentedtarget.get(0);
+	            	  String targetMin = target.get(0).getTokenValue();
+	            	  String targetMax = target.get(target.size()-1).getTokenValue();
+	            	  int count = 0;
+	            	  for (Token token : sentence) {
+	                	  if (token.getTokenValue().equals(targetMin)) {
+	                		  posTargetMin=count;
+	                	  }
+	                	  if (token.getTokenValue().equals(targetMax) && posTargetMin > -1) {
+	                		  posTargetMax=count;
+	                		  break;
+	                	  }
+	                	  count++;
+	                  }
+	            	  if (posTargetMin-windowMin>=0) {
+	            		  posTargetMin=posTargetMin-windowMin;
+	            	  }
+	            	  else posTargetMin=0;
+	            	  if (posTargetMax+windowMax<sentence.size()) {
+	            		  posTargetMax=posTargetMax+windowMax;
+	            	  }
+	            	  else posTargetMax=sentence.size()-1;
+	            	  for (int x = posTargetMin; x<=posTargetMax; x++) {
+	            		  sentString += sentence.get(x).getTokenValue() + " ";
+	            	  }
+	            	  text += polarityString + "\t" + sentString +"\n";
+	              }
+	    	  }
+	          
+	        }
+	      }//end of sentence
+	    } catch (JDOMException | IOException e) {
+	      e.printStackTrace();
+	    }
+	    
+	    return text;
+	  }
 
 
 }
